@@ -1,5 +1,2 @@
-data/
-node_modules/
-scraper-error.log
-config.codekit
-config.codekit3
+node_modules
+config.js
