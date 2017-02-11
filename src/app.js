@@ -1,3 +1,5 @@
+'use strict';
+
 // Load Modules
 var express = require('express'),    // Loads the Express module
     pug     = require('pug'),        // Loads the PUG templating engine for Express
@@ -18,19 +20,56 @@ app.set('views', __dirname + '/views');
 
 
 
-// Fetch data from Twitter API
+fetchData(5, 10, 7)
+    .then(getTweets)
+    .then(getUsers)
+    .then(getReceivedMessages)
+    .then(getSentMessages)
+    .then(sortMessages)
+    .then(dataSet => {
+        fetchedData = dataSet;
+    });
+
+
+
+
+//--------------------------------
+// Web Server and route management
+//--------------------------------
+
+
+// Default route loads the main template
+app.get('/', function (req, res) {
+    res.render('main', fetchedData);
+});
+
+// Demo route loads the original index.html file for comparison
+app.get('/demo', function (req, res) {
+    res.sendFile(__dirname + '/views/index.html');
+});
+
+// Start the Express web server
+app.listen(httpPort);
+console.log('Express server listening on port ' + httpPort);
+
+
+
+
+//-------------------------------
+// Fetching data from Twitter API
+//-------------------------------
+
 function fetchData(tweets_count, users_count, messages_count) {
     return new Promise((resolve, reject) => {
         twit.get('account/verify_credentials', {skip_status: true}, (err, data) => {
             // Handle any errors
             if (err) reject(err);
             // Fullfill the promise by returning the user's details
-            console.log(data);
             resolve({
                 user: {
                     name: data.name,
                     image_url: data.profile_image_url,
-                    bg_image_url: data.profile_background_image_url,
+                    bg_image_url: data.profile_banner_url,
                     screen_name: data.screen_name,
                 },
                 tCount: tweets_count,
@@ -41,7 +80,6 @@ function fetchData(tweets_count, users_count, messages_count) {
     });
 }
 
-
 function getTweets(dataSet) {
     return new Promise((resolve, reject) => {
         twit.get('statuses/user_timeline', {count: dataSet.tCount}, (err, data) => {
@@ -50,7 +88,7 @@ function getTweets(dataSet) {
             // Add relevant tweet fields to the dataSet
             dataSet.tweets = [];
             data.forEach(tweet => dataSet.tweets.push({
-                created_at: tweet.created_at,
+                created_at: formatTimeStamp(tweet.created_at),
                 text: tweet.text,
                 user: {
                     name: tweet.user.name,
@@ -129,39 +167,36 @@ function getReceivedMessages(dataSet) {
     });
 }
 
+
 function sortMessages(dataSet) {
     return new Promise((resolve, reject) => {
         dataSet.messages = dataSet.messages
-            .sort((a,b) => new Date(a.created_at) > new Date(b.created_at))
+            .sort((a, b) => new Date(a.created_at) > new Date(b.created_at))
             .slice(-dataSet.mCount)
             .reverse();
-
+        dataSet.messages
+            .forEach(el => el.created_at = formatTimeStamp(el.created_at));
         resolve(dataSet);
     });
 }
 
-fetchData(5, 5, 5)
-    .then(getTweets)
-    .then(getUsers)
-    .then(getReceivedMessages)
-    .then(getSentMessages)
-    .then(sortMessages)
-    .then(dataSet => {
-        fetchedData = dataSet;
-        console.log(fetchedData.messages);
-    });
 
 
-// Default route loads the main template
-app.get('/', function (req, res) {
-    res.render('main', fetchedData);
-});
+//---------
+// Utilties
+//---------
 
-// Demo route loads the original index.html file for comparison
-app.get('/demo', function (req, res) {
-    res.sendFile(__dirname + '/views/index.html');
-});
+function formatTimeStamp(str) {
+    let month  = 'Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec'.split('|'),
+        date   = new Date(str),
+        delta  = Date.now() - date,
+        hours  = delta / 3600000,
+        mins   = delta / 60000,
+        output = '';
 
-// Start the Express web server
-app.listen(httpPort);
-console.log('Express server listening on port ' + httpPort);
+    if (mins  <  1) return 'just now';
+    if (mins  < 60) return Math.floor(mins) + ' minutes ago';
+    if (hours <  2) return '1 hour ago';
+    if (hours < 24) return Math.floor(hours) + ' hours ago';
+    return date.getDate() + ' ' + month[date.getMonth()] + ' ' + date.getFullYear();
+}

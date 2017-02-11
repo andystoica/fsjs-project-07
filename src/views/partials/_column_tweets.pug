@@ -3,7 +3,7 @@ div.grid-33
         ul.app--tweet--list
             each tweet in tweets
                 li
-                    strong.app--tweet--timestamp 4h
+                    strong.app--tweet--timestamp #{tweet.created_at}
                     a.app--tweet--author
                         div.app--avatar(style='background-image: url(' + tweet.user.image_url + ')')
                             img(src=tweet.user.image_url)
