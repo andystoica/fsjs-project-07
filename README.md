@@ -15,3 +15,17 @@ Your 5 most recent friends.
 Your 5 most recent private messages.
 
 The ability to look at a layout and see the data behind it is an essential skill for full-stack developers. With the provided HTML and CSS starter files, you'll be able to see what the final result should look like. Replace the example data from the HTML file with your own information, which you'll grab directly from Twitter's API.
+
+
+Twitter authentication
+======================
+You must create a config.js file using the template provided and populate the fields with your own account information.
+
+const twitterAPIaccess = {
+    consumer_key:         '...',
+    consumer_secret:      '...',
+    access_token:         '...',
+    access_token_secret:  '...'
+}
+
+module.exports = twitterAPIaccess;

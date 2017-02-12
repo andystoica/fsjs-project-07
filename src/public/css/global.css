@@ -141,6 +141,10 @@ button {
   text-transform: none;
 }
 
+button a {
+    text-decoration: none;
+}
+
 /* line 213, ../sass/circle/core/_reset.sass */
 select {
   text-transform: none;

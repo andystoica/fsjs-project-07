@@ -1,10 +1,10 @@
 div.app--tweet
-    form
+    form(method='post' action='/')
         div.circle--fluid
             div.circle--fluid--cell.circle--fluid--primary.align-bottom.app--tweet--post
                 div.app--avatar(style='background-image: url(' + user.image_url + ')')
                     img(src=user.image_url)
-                textarea.circle--textarea--input#tweet-textarea(placeholder="What's happening?")
+                textarea.circle--textarea--input#tweet-textarea(name='tweet' placeholder="What's happening?")
                 strong.app--tweet--char#tweet-char 140
             div.circle--fluid--cell.align-bottom
-                button.button-primary Tweet
+                button.button-primary(type='submit') Tweet

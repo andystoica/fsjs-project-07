@@ -4,13 +4,15 @@
   "description": "Treehouse FSJS Techdegree Project 7 - Build a Twitter Interface",
   "main": "app.js",
   "dependencies": {
+    "body-parser": "^1.16.1",
     "express": "^4.14.1",
     "pug": "^2.0.0-beta11",
     "twit": "^2.2.5"
   },
   "devDependencies": {},
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node ./src/app.js"
   },
   "author": "Andy Stoica",
   "license": "MIT"

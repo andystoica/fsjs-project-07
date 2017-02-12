@@ -1,35 +1,22 @@
 'use strict';
 
 // Load Modules
-var express = require('express'),    // Loads the Express module
-    pug     = require('pug'),        // Loads the PUG templating engine for Express
-    Twit    = require('twit'),       // Provides interaction with Twitter API
-    config  = require('./config');   // Object literal containing Twitter API access key and token
+var express    = require('express'),      // Loads the Express module
+    bodyParser = require('body-parser'),  // Loads the Body-Parser module
+    pug        = require('pug'),          // Loads the PUG templating engine for Express
+    Twit       = require('twit'),         // Provides interaction with Twitter API
+    config     = require('./config');     // Object literal containing Twitter API access key and token
 
 
 // Initialise application
 var twit = new Twit(config),
     app  = express(),
-    httpPort = process.env.PORT || 3030,
-    fetchedData = {};
+    httpPort = process.env.PORT || 3030;
 
-app.use(express.static(__dirname + '/public'));
 app.set('view engine', 'pug');
 app.set('views', __dirname + '/views');
-
-
-
-
-fetchData(5, 10, 7)
-    .then(getTweets)
-    .then(getUsers)
-    .then(getReceivedMessages)
-    .then(getSentMessages)
-    .then(sortMessages)
-    .then(dataSet => {
-        fetchedData = dataSet;
-    });
-
+app.use(express.static(__dirname + '/public'));
+app.use(bodyParser.urlencoded({ extended: true }));
 
 
 
@@ -40,17 +27,33 @@ fetchData(5, 10, 7)
 
 // Default route loads the main template
 app.get('/', function (req, res) {
-    res.render('main', fetchedData);
+    fetchData()
+        .then(dataSet => {
+            res.render('main', dataSet);
+        })
+        .catch(err => { res.redirect('/error') });
 });
 
-// Demo route loads the original index.html file for comparison
-app.get('/demo', function (req, res) {
-    res.sendFile(__dirname + '/views/index.html');
+// Posts a new tweet to user account
+app.post('/', function (req, res) {
+    // If tweet is not empty, send the API call and reload
+    if (req.body.tweet)
+        postTweet(req.body.tweet)
+            .then(tweet => { res.redirect('/') })
+            .catch(err => { res.redirect('/error') });
+    else
+        res.redirect('/');
+});
+
+// Error route loads the error message
+app.get('/error', function (req, res) {
+    res.render('error');
 });
 
 // Start the Express web server
-app.listen(httpPort);
-console.log('Express server listening on port ' + httpPort);
+app.listen(httpPort, function() {
+    console.log('Express server listening on port ' + httpPort);
+});
 
 
 
@@ -59,7 +62,29 @@ console.log('Express server listening on port ' + httpPort);
 // Fetching data from Twitter API
 //-------------------------------
 
-function fetchData(tweets_count, users_count, messages_count) {
+function fetchData() {
+    return new Promise((resolve, reject) => {
+        let fetchedData = {};
+
+        getUserDetails()
+            .then(getTweets)
+            .then(getUsers)
+            .then(getReceivedMessages)
+            .then(getSentMessages)
+            .then(sortMessages)
+            .then(dataSet => {
+                resolve(dataSet);
+            })
+            .catch(err => {
+                reject(err);
+            });
+    });
+}
+
+/**
+ * Get user profile details
+ */
+function getUserDetails() {
     return new Promise((resolve, reject) => {
         twit.get('account/verify_credentials', {skip_status: true}, (err, data) => {
             // Handle any errors
@@ -72,14 +97,17 @@ function fetchData(tweets_count, users_count, messages_count) {
                     bg_image_url: data.profile_banner_url,
                     screen_name: data.screen_name,
                 },
-                tCount: tweets_count,
-                uCount: users_count,
-                mCount: messages_count
+                tCount: 5,
+                uCount: 5,
+                mCount: 5
             });
         });
     });
 }
 
+/**
+ * Get last user status messages (tweets)
+ */
 function getTweets(dataSet) {
     return new Promise((resolve, reject) => {
         twit.get('statuses/user_timeline', {count: dataSet.tCount}, (err, data) => {
@@ -104,6 +132,23 @@ function getTweets(dataSet) {
     });
 }
 
+/**
+ * Post a new status message (tweet) on the user timeline
+ */
+function postTweet(tweet) {
+    return new Promise((resolve, reject) => {
+        twit.post('statuses/update', {status: tweet}, (err, data) => {
+            // Handle any errors
+            if (err) reject(err);
+            // Resolve the promise
+            resolve(tweet);
+        });
+    });
+}
+
+/**
+ * Get last few friends
+ */
 function getUsers(dataSet) {
     return new Promise((resolve, reject) => {
         twit.get('friends/list', {count: dataSet.uCount}, (err, data) => {
@@ -123,6 +168,9 @@ function getUsers(dataSet) {
     });
 }
 
+/**
+ * Get last sent direct messages
+ */
 function getSentMessages(dataSet) {
     return new Promise((resolve, reject) => {
         twit.get('direct_messages/sent', {screen_name: dataSet.screen, count: dataSet.mCount}, (err, data) => {
@@ -145,6 +193,9 @@ function getSentMessages(dataSet) {
     });
 }
 
+/**
+ * Get last received direct messages
+ */
 function getReceivedMessages(dataSet) {
     return new Promise((resolve, reject) => {
         twit.get('direct_messages', {screen_name: dataSet.screen, count: dataSet.mCount}, (err, data) => {
@@ -167,7 +218,9 @@ function getReceivedMessages(dataSet) {
     });
 }
 
-
+/**
+ * Combine, sort and trim the list of direct messages
+ */
 function sortMessages(dataSet) {
     return new Promise((resolve, reject) => {
         dataSet.messages = dataSet.messages
@@ -186,6 +239,9 @@ function sortMessages(dataSet) {
 // Utilties
 //---------
 
+/**
+ * Formats time interval to user friendly readout
+ */
 function formatTimeStamp(str) {
     let month  = 'Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec'.split('|'),
         date   = new Date(str),
