@@ -50,11 +50,17 @@ app.get('/error', function (req, res) {
     res.render('error');
 });
 
+// Handle 404 errors
+app.use('*', function(req, res) {
+    res.redirect('/error');
+});
+
+
+
 // Start the Express web server
 app.listen(httpPort, function() {
     console.log('Express server listening on port ' + httpPort);
 });
-
 
 
 
